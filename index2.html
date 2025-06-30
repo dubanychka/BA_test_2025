@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Тест для стажерів бізнес-аналітиків</title>
 <style>
-/* ... залишаємо твої стилі без змін ... */
 body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; }
 .container { max-width: 900px; margin: 0 auto; background: white; border-radius: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); overflow: hidden; animation: slideIn 0.8s ease-out; }
 @keyframes slideIn { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
@@ -40,6 +39,8 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background:
 .start-screen h2 { font-size: 2em; color: #2c3e50; margin-bottom: 20px; }
 .start-screen p { font-size: 1.1em; color: #6c757d; margin-bottom: 30px; line-height: 1.6; }
 .timer { position: fixed; top: 20px; right: 20px; background: rgba(0,0,0,0.8); color: white; padding: 10px 15px; border-radius: 20px; font-weight: bold; z-index: 1000; display: none; }
+.sort-dragging { opacity: 0.5; }
+.multi-select-note { color: #666; font-size: 0.9em; font-style: italic; margin-bottom: 15px; }
 </style>
 </head>
 <body>
@@ -47,68 +48,42 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background:
   <div class="header">
     <h1>🎯 Тест для стажерів Бізнес-Аналітиків</h1>
     <div class="test-info">
-      <div class="info-card">
-        <div style="font-size: 1.5em;">⏱️</div>
-        <div>40 хвилин</div>
-      </div>
-      <div class="info-card">
-        <div style="font-size: 1.5em;">❓</div>
-        <div>25 запитань</div>
-      </div>
-      <div class="info-card">
-        <div style="font-size: 1.5em;">📊</div>
-        <div>Прохідний бал: 18/25</div>
-      </div>
+      <div class="info-card"><div style="font-size: 1.5em;">⏱️</div><div>40 хвилин</div></div>
+      <div class="info-card"><div style="font-size: 1.5em;">❓</div><div>25 запитань</div></div>
+      <div class="info-card"><div style="font-size: 1.5em;">📊</div><div>Прохідний бал: 18/25</div></div>
     </div>
   </div>
-
   <div class="content">
-    <!-- Start Screen -->
     <div id="startScreen" class="start-screen">
       <h2>Готові перевірити свої знання?</h2>
-      <p>Цей тест містить 25 питань з різних областей бізнес-аналізу. Включає різні типи питань: одиночний вибір, множинний вибір, встановлення відповідності та сортування.</p>
+      <p>Цей тест містить 25 питань з різних областей бізнес-аналізу. Включає різні типи питань: одиночний вибір, множинний вибір, відповідність, сортування.</p>
       <p><strong>Час на виконання:</strong> 40 хвилин<br>
       <strong>Прохідний бал:</strong> 18 з 25 можливих балів</p>
       <button class="btn btn-primary" onclick="startTest()">Почати тест</button>
     </div>
-
-    <!-- Timer -->
     <div id="timer" class="timer">40:00</div>
-
-    <!-- Progress Bar -->
-    <div id="progressContainer" class="progress-container" style="display: none;">
-      <div class="progress-bar" id="progressBar"></div>
-    </div>
-
-    <!-- Questions Container -->
+    <div id="progressContainer" class="progress-container" style="display: none;"><div class="progress-bar" id="progressBar"></div></div>
     <div id="questionsContainer" style="display: none;"></div>
-
-    <!-- Navigation -->
     <div id="navigation" class="navigation" style="display: none;">
       <button class="btn btn-secondary" id="prevBtn" onclick="previousQuestion()">Назад</button>
       <button class="btn btn-primary" id="nextBtn" onclick="nextQuestion()">Далі</button>
     </div>
-
-    <!-- Results Screen -->
     <div id="resultsScreen" class="results">
-      <div id="scoreCircle" class="score-circle score-excellent">
-        <span id="scoreText">0/25</span>
-      </div>
+      <div id="scoreCircle" class="score-circle score-excellent"><span id="scoreText">0/25</span></div>
       <h2 id="scoreTitle">Ваш результат</h2>
       <p id="scoreDescription"></p>
       <button class="btn btn-primary" onclick="restartTest()">Пройти ще раз</button>
     </div>
   </div>
 </div>
-
 <script>
 const questions = [
-  {
+   {
     category: "Основи аналізу вимог",
     question: "Розташуйте у правильному порядку кроки з виявлення та аналізу вимог:",
     options: [
       "А. Верифікація вимог",
-      "Б. Валідація вимог", 
+      "Б. Валідація вимог",
       "В. Виявлення вимог",
       "Г. Документування вимог",
       "Д. Затвердження вимог",
@@ -304,7 +279,7 @@ const questions = [
     correct: [0],
     type: "single"
   },
-  {
+   {
     category: "Діаграми діяльності",
     question: "Встановіть відповідність між елементами діаграми діяльності:",
     leftItems: [
@@ -439,6 +414,7 @@ let currentQuestion = 0;
 let userAnswers = [];
 let timer = null;
 let timeLeft = 2400; // 40 хвилин
+let dragSortIndex = null;
 
 function startTest() {
   document.getElementById('startScreen').style.display = 'none';
@@ -488,9 +464,35 @@ function renderQuestion() {
         </label>
       `;
     });
+  } else if (q.type === "match") {
+    q.leftItems.forEach((left, i) => {
+      html += `
+        <div style="margin-bottom:10px;">
+          <b>${left}</b>
+          <select onchange="selectMatch(${currentQuestion}, ${i}, this.value)">
+            <option value="">Оберіть...</option>
+            ${q.rightItems.map((right, j) => {
+              let selected = userAnswers[currentQuestion]?.[i] == j ? "selected" : "";
+              return `<option value="${j}" ${selected}>${right}</option>`;
+            }).join("")}
+          </select>
+        </div>
+      `;
+    });
+  } else if (q.type === "sort") {
+    // Порядок: масив індексів
+    let order = userAnswers[currentQuestion] || q.options.map((_, i) => i);
+    html += `<div id="sort-list">`;
+    order.forEach((optIdx, i) => {
+      html += `
+        <div class="option" draggable="true" ondragstart="sortDrag(event,${i})" ondragover="event.preventDefault()" ondrop="sortDrop(event,${i})" id="sortopt${i}">
+          ${q.options[optIdx]}
+        </div>
+      `;
+    });
+    html += `</div>
+    <div style="font-size:0.9em;color:#888;margin:10px 0;">Перетягніть варіанти у потрібному порядку</div>`;
   }
-  // додати інші типи питань за потреби
-
   html += "</div></div>";
 
   container.innerHTML = html;
@@ -513,12 +515,17 @@ function selectAnswer(qIdx, optIdx, isMultiple) {
   renderQuestion();
 }
 
+function selectMatch(qIdx, leftIdx, rightIdx) {
+  if (!userAnswers[qIdx]) userAnswers[qIdx] = [];
+  userAnswers[qIdx][leftIdx] = rightIdx === "" ? null : parseInt(rightIdx);
+  renderQuestion();
+}
+
 function previousQuestion() {
   if (currentQuestion > 0) currentQuestion--;
   renderQuestion();
   updateProgress();
 }
-
 function nextQuestion() {
   if (currentQuestion < questions.length - 1) {
     currentQuestion++;
@@ -528,7 +535,6 @@ function nextQuestion() {
     showResults();
   }
 }
-
 function updateProgress() {
   const percent = ((currentQuestion) / questions.length) * 100;
   document.getElementById("progressBar").style.width = percent + "%";
@@ -546,13 +552,24 @@ function startTimer() {
     }
   }, 1000);
 }
-
 function updateTimerText() {
   const min = Math.floor(timeLeft / 60);
   const sec = timeLeft % 60;
   document.getElementById("timer").textContent = `${min}:${sec.toString().padStart(2, "0")}`;
 }
 
+// Drag & Drop for sort
+function sortDrag(event, idx) { dragSortIndex = idx; }
+function sortDrop(event, idx) {
+  let arr = (userAnswers[currentQuestion] || questions[currentQuestion].options.map((_,i)=>i)).slice();
+  const [removed] = arr.splice(dragSortIndex, 1);
+  arr.splice(idx, 0, removed);
+  userAnswers[currentQuestion] = arr;
+  dragSortIndex = null;
+  renderQuestion();
+}
+
+// Перевірка відповідей
 function showResults() {
   document.getElementById("questionsContainer").style.display = "none";
   document.getElementById("navigation").style.display = "none";
@@ -562,9 +579,31 @@ function showResults() {
 
   let score = 0;
   questions.forEach((q, i) => {
+    // single
     if (q.type === "single" && userAnswers[i] == q.correct[0]) score++;
+    // multiple
     if (q.type === "multiple" && Array.isArray(userAnswers[i]) && arraysEqual(userAnswers[i].sort(), q.correct.slice().sort())) score++;
-    // якщо додавати інші типи, прописати логіку тут
+    // match
+    if (q.type === "match" && Array.isArray(userAnswers[i])) {
+      let correct = true;
+      Object.keys(q.correct).forEach((leftIdx, idx) => {
+        if (
+          userAnswers[i][idx] == null ||
+          q.rightItems[userAnswers[i][idx]].charAt(0) !== q.correct[leftIdx]
+        ) {
+          correct = false;
+        }
+      });
+      if (correct) score++;
+    }
+    // sort
+    if (q.type === "sort" && Array.isArray(userAnswers[i])) {
+      let correct = true;
+      q.correct.forEach((idx, j) => {
+        if (parseInt(userAnswers[i][j]) !== idx) correct = false;
+      });
+      if (correct) score++;
+    }
   });
   document.getElementById("scoreText").textContent = `${score}/${questions.length}`;
   document.getElementById("scoreTitle").textContent = "Ваш результат";
