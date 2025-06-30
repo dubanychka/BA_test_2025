@@ -1,0 +1,86 @@
+
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Інтерактивний тест з таймером</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; background: #f4f6f8; }
+    #timer { font-size: 1.5em; font-weight: bold; color: #d9534f; margin-bottom: 20px; }
+    .hidden { display: none; }
+    button { padding: 10px 20px; font-size: 1em; margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <h1>Тест для бізнес-аналітиків</h1>
+  <button onclick="startTest()">Почати тест</button>
+
+  <div id="timer" class="hidden">40:00</div>
+
+  <div id="testContainer" class="hidden">
+    <p id="questionText">Тут буде запитання</p>
+    <button onclick="nextQuestion()">Наступне</button>
+  </div>
+
+  <script>
+    const questions = [
+      { question: "Основна мета бізнес-аналізу?", answers: ["А", "Б", "В"], correct: 1 },
+      { question: "Що таке BABOK?", answers: ["Документ", "Інструмент", "Рамка"], correct: 0 }
+    ];
+    let current = 0;
+    let timerInterval;
+    let timeLeft = 2400; // 40 хвилин у секундах
+
+    function startTest() {
+      document.querySelector('button').style.display = 'none';
+      document.getElementById('testContainer').classList.remove('hidden');
+      document.getElementById('timer').classList.remove('hidden');
+      showQuestion();
+      startTimer();
+    }
+
+    function showQuestion() {
+      const q = questions[current];
+      document.getElementById('questionText').textContent = q.question;
+    }
+
+    function nextQuestion() {
+      current++;
+      if (current < questions.length) {
+        showQuestion();
+      } else {
+        finishTest("Ви завершили тест.");
+      }
+    }
+
+    function startTimer() {
+      updateTimerDisplay();
+      timerInterval = setInterval(() => {
+        timeLeft--;
+        updateTimerDisplay();
+        if (timeLeft <= 0) {
+          clearInterval(timerInterval);
+          finishTest("⏰ Час вичерпано! Тест завершено автоматично.");
+        }
+      }, 1000);
+    }
+
+    function updateTimerDisplay() {
+      const minutes = Math.floor(timeLeft / 60);
+      const seconds = timeLeft % 60;
+      document.getElementById('timer').textContent = 
+        `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    }
+
+    function finishTest(message) {
+      document.getElementById('testContainer').innerHTML = `<strong>${message}</strong>`;
+      document.getElementById('timer').classList.add('hidden');
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+      console.log("DOM готовий.");
+    });
+  </script>
+</body>
+</html>
