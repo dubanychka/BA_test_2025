@@ -35,12 +35,30 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background:
 .results { display: none; text-align: center; padding: 40px 20px; }
 .score-circle { width: 150px; height: 150px; border-radius: 50%; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center; font-size: 2.5em; font-weight: bold; color: white; position: relative; }
 .score-excellent { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+.score-good { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+.score-poor { background: linear-gradient(135deg, #ff6b6b 0%, #ffa500 100%); }
 .start-screen { text-align: center; padding: 40px 20px; }
 .start-screen h2 { font-size: 2em; color: #2c3e50; margin-bottom: 20px; }
 .start-screen p { font-size: 1.1em; color: #6c757d; margin-bottom: 30px; line-height: 1.6; }
 .timer { position: fixed; top: 20px; right: 20px; background: rgba(0,0,0,0.8); color: white; padding: 10px 15px; border-radius: 20px; font-weight: bold; z-index: 1000; display: none; }
+.timer.warning { background: rgba(255, 193, 7, 0.9); color: #000; }
+.timer.danger { background: rgba(220, 53, 69, 0.9); color: white; }
 .sort-dragging { opacity: 0.5; }
 .multi-select-note { color: #666; font-size: 0.9em; font-style: italic; margin-bottom: 15px; }
+.match-row { margin-bottom: 15px; padding: 10px; border: 1px solid #e0e6ed; border-radius: 8px; background: #f8f9fa; }
+.match-row label { font-weight: 600; color: #2c3e50; margin-bottom: 5px; display: block; }
+.match-row select { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em; }
+#sort-list { min-height: 300px; }
+.sort-option { display: flex; align-items: center; padding: 12px; margin-bottom: 8px; border: 2px solid #e0e6ed; border-radius: 8px; background: white; cursor: move; transition: all 0.3s ease; user-select: none; }
+.sort-option:hover { border-color: #667eea; background: #f8f9ff; }
+.sort-option.dragging { opacity: 0.5; transform: rotate(2deg); }
+.sort-handle { margin-right: 10px; color: #666; font-weight: bold; }
+.detailed-results { margin-top: 20px; text-align: left; }
+.question-result { margin-bottom: 15px; padding: 15px; border-radius: 8px; }
+.question-result.correct { background: #d4edda; border: 1px solid #c3e6cb; }
+.question-result.incorrect { background: #f8d7da; border: 1px solid #f5c6cb; }
+.question-result h4 { margin: 0 0 5px 0; font-size: 1em; }
+.question-result .answer { font-size: 0.9em; color: #666; }
 </style>
 </head>
 <body>
@@ -72,10 +90,16 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background:
       <div id="scoreCircle" class="score-circle score-excellent"><span id="scoreText">0/25</span></div>
       <h2 id="scoreTitle">Ваш результат</h2>
       <p id="scoreDescription"></p>
+      <div id="detailedResults" class="detailed-results" style="display: none;">
+        <h3>Детальні результати:</h3>
+        <div id="resultsList"></div>
+      </div>
+      <button class="btn btn-secondary" onclick="toggleDetailedResults()" id="toggleBtn">Показати детальні результати</button>
       <button class="btn btn-primary" onclick="restartTest()">Пройти ще раз</button>
     </div>
   </div>
 </div>
+
 <script>
 const questions = [
    {
@@ -83,14 +107,15 @@ const questions = [
     question: "Розташуйте у правильному порядку кроки з виявлення та аналізу вимог:",
     options: [
       "А. Верифікація вимог",
-      "Б. Валідація вимог",
+      "Б. Валідація вимог", 
       "В. Виявлення вимог",
       "Г. Документування вимог",
       "Д. Затвердження вимог",
       "Є. Моделювання вимог"
     ],
     correct: [2, 5, 0, 1, 3, 4], // В → Є → А → Б → Г → Д
-    type: "sort"
+    type: "sort",
+    explanation: "Правильний порядок: Виявлення → Моделювання → Верифікація → Валідація → Документування → Затвердження"
   },
   {
     category: "Основи аналізу вимог",
@@ -102,32 +127,34 @@ const questions = [
       "Г. Моделі даних"
     ],
     correct: [1],
-    type: "single"
+    type: "single",
+    explanation: "Моделі скоупу визначають межі системи та структуру її функцій"
   },
   {
     category: "Типи знань",
     question: "Встановіть відповідність між типами знань та їх описом:",
     leftItems: [
       "1. Понятійні або концептуальні знання",
-      "2. Конструктивні знання",
+      "2. Конструктивні знання", 
       "3. Процедурні або алгоритмічні знання",
       "4. Фактографічні знання"
     ],
     rightItems: [
       "А. Кількісні та якісні характеристики конкретних об'єктів",
       "Б. Вже відомі людям методи вирішення задач, алгоритми, програми",
-      "В. Набір понять з деякої галузі знань, їх властивості та взаємозв'язки",
+      "В. Набір понять з деякої галузі знань, їх властивості та взаємозв'язки", 
       "Г. Знання про структуру об'єктів, про взаємодію їх частин"
     ],
     correct: {"1": "В", "2": "Г", "3": "Б", "4": "А"},
-    type: "match"
+    type: "match",
+    explanation: "Кожен тип знань має свою специфіку та область застосування"
   },
   {
     category: "Бізнес-правила",
     question: "Оберіть 6 типів бізнес-правил, які виділяє К.Вігерс:",
     options: [
       "а) Бізнес-терміни",
-      "b) Гіпотези",
+      "b) Гіпотези", 
       "c) Обмеження",
       "d) Тригери",
       "e) Обставини",
@@ -138,19 +165,21 @@ const questions = [
       "j) Факти"
     ],
     correct: [0, 2, 5, 6, 7, 9],
-    type: "multiple"
+    type: "multiple",
+    explanation: "За К.Вігерсом: Бізнес-терміни, Обмеження, Обрахунки, Висновки, Процедури, Факти"
   },
   {
-    category: "Бізнес-правила",
+    category: "Бізнес-правила", 
     question: "Правила, які за деяких обставин ініціюють певні дії:",
     options: [
       "а) Факти",
       "b) Тригери",
-      "c) Обставини",
+      "c) Обставини", 
       "d) Обрахунки"
     ],
     correct: [1],
-    type: "single"
+    type: "single",
+    explanation: "Тригери - це правила, що активуються при певних умовах"
   },
   {
     category: "Бізнес-правила",
@@ -158,7 +187,7 @@ const questions = [
     options: [
       "а. Зміни у БПр ніяк не впливають на Вимоги",
       "b. Зміни у БПр можуть зумовити необхідність перегляду існуючих або створення нових Вимог",
-      "c. БПр не залежать від Вимог та не можуть бути змінені аби відповідати Вимогам",
+      "c. БПр не залежать від Вимог та не можуть бути змінені аби відповідати Вимогам", 
       "d. Одне БПр може бути реалізоване декількома Вимогами",
       "e. Одне БПр може бути реалізоване лише однією Вимогою",
       "f. Одна Вимога може виконувати лише одне БПр",
@@ -166,7 +195,8 @@ const questions = [
       "h. БПр можуть бути змінені аби відповідати Вимогам"
     ],
     correct: [1, 3, 6],
-    type: "multiple"
+    type: "multiple",
+    explanation: "Бізнес-правила та вимоги мають складні взаємозв'язки типу many-to-many"
   },
   {
     category: "Об'єктно-орієнтоване моделювання",
@@ -174,11 +204,12 @@ const questions = [
     options: [
       "а) Інкапсуляція",
       "b) Наслідування",
-      "c) Абстрагування",
+      "c) Абстрагування", 
       "d) Поліморфізм"
     ],
     correct: [2],
-    type: "single"
+    type: "single",
+    explanation: "Абстрагування - це виділення найважливіших характеристик об'єкта"
   },
   {
     category: "Об'єктно-орієнтоване моделювання",
@@ -189,7 +220,8 @@ const questions = [
       "c. Модель містить лише ті аспекти реальності, які важливі з позиції цілі моделювання"
     ],
     correct: [2],
-    type: "single"
+    type: "single", 
+    explanation: "Модель завжди створюється з конкретною метою і включає лише релевантні аспекти"
   },
   {
     category: "UML",
@@ -199,18 +231,19 @@ const questions = [
       "Б. Стан",
       "В. Кооперація",
       "Г. Коментар",
-      "Д. Артефакт",
+      "Д. Артефакт", 
       "Є. Дія"
     ],
     correct: [0, 1, 2, 5],
-    type: "multiple"
+    type: "multiple",
+    explanation: "Поведінкові сутності описують динамічні аспекти системи"
   },
   {
     category: "UML",
     question: "Встановіть відповідність між символом модифікатора доступу:",
     leftItems: [
       "1. (-)",
-      "2. (+)",
+      "2. (+)", 
       "3. (#)"
     ],
     rightItems: [
@@ -219,7 +252,8 @@ const questions = [
       "В. Відкритий доступ"
     ],
     correct: {"1": "А", "2": "В", "3": "Б"},
-    type: "match"
+    type: "match",
+    explanation: "Модифікатори доступу: (-) private, (+) public, (#) protected"
   },
   {
     category: "UML",
@@ -231,18 +265,20 @@ const questions = [
       "Г. Коментар"
     ],
     correct: [0],
-    type: "single"
+    type: "single",
+    explanation: "Узагальнення (Generalization) - це відношення 'є підтипом'"
   },
   {
     category: "Варіанти використання",
     question: "Що таке Варіант використання (Use case):",
     options: [
       "А. Окрема самостійна політика підприємства",
-      "Б. Спрощене представлення досліджуваної сутності",
+      "Б. Спрощене представлення досліджуваної сутності", 
       "В. Форма опису вимоги у вигляді множини послідовних дій"
     ],
     correct: [2],
-    type: "single"
+    type: "single",
+    explanation: "Use case описує послідовність дій для досягнення мети"
   },
   {
     category: "Варіанти використання",
@@ -253,10 +289,11 @@ const questions = [
       "В. Invoke (викликає)"
     ],
     correct: [0],
-    type: "single"
+    type: "single",
+    explanation: "Include завжди виконується, на відміну від умовного Extend"
   },
   {
-    category: "Варіанти використання",
+    category: "Варіанти використання", 
     question: "Зв'язок між Бізнес-дійовою особою/Робітником та Бізнес-ВВ:",
     options: [
       "А. Інкапсуляція",
@@ -265,7 +302,8 @@ const questions = [
       "Г. Узагальнення"
     ],
     correct: [1],
-    type: "single"
+    type: "single",
+    explanation: "Асоціація показує участь актора у використанні системи"
   },
   {
     category: "Діаграми діяльності",
@@ -277,7 +315,8 @@ const questions = [
       "Г. Стрілка напрямку процесу"
     ],
     correct: [0],
-    type: "single"
+    type: "single",
+    explanation: "Guard condition - це умова, що визначає можливість переходу"
   },
    {
     category: "Діаграми діяльності",
@@ -290,12 +329,13 @@ const questions = [
     ],
     rightItems: [
       "А. Копії токена виходять у всіх напрямках",
-      "Б. Токен на виході з'являється лише при надходженні всіх вхідних токенів",
+      "Б. Токен на виході з'являється лише при надходженні всіх вхідних токенів", 
       "В. Вихід лише в одному напрямку",
       "Г. Продовження при першому токені, що надійшов"
     ],
     correct: {"1": "В", "2": "Г", "3": "А", "4": "Б"},
-    type: "match"
+    type: "match",
+    explanation: "Кожен елемент має свою специфічну поведінку з токенами"
   },
   {
     category: "Діаграми станів",
@@ -306,7 +346,8 @@ const questions = [
       "В. Множину об'єктів із спільними атрибутами"
     ],
     correct: [1],
-    type: "single"
+    type: "single",
+    explanation: "State machine diagram моделює життєвий цикл об'єкта"
   },
   {
     category: "Діаграми станів",
@@ -318,11 +359,12 @@ const questions = [
     ],
     rightItems: [
       "А. Дія на переході",
-      "Б. Подія переходу",
+      "Б. Подія переходу", 
       "В. Умова"
     ],
     correct: {"1/ -": "Б", "[2] -": "В", "/3 -": "А"},
-    type: "match"
+    type: "match",
+    explanation: "Синтаксис переходу: подія/[умова]/дія"
   },
   {
     category: "Управління вимогами",
@@ -334,18 +376,20 @@ const questions = [
       "Г. Унікальний ідентифікатор вимоги не можна використовувати повторно"
     ],
     correct: [3],
-    type: "single"
+    type: "single",
+    explanation: "Унікальність ідентифікатора має зберігатися протягом всього життєвого циклу проекту"
   },
   {
     category: "Управління вимогами",
     question: "Стійкий стан системи після виконання ВВ:",
     options: [
       "А. Постумова",
-      "Б. Передумова",
+      "Б. Передумова", 
       "В. Тригер"
     ],
     correct: [0],
-    type: "single"
+    type: "single",
+    explanation: "Постумова описує стан системи після успішного виконання use case"
   },
   {
     category: "Управління вимогами",
@@ -358,19 +402,21 @@ const questions = [
       "Д. Залучені у досягнення бізнес-цілей Первинних Дійових осіб"
     ],
     correct: [0, 4],
-    type: "multiple"
+    type: "multiple",
+    explanation: "Вторинні актори підтримують первинних, але не ініціюють взаємодію"
   },
   {
     category: "Якість SRS",
     question: "Як визначається несуперечливість SRS:",
     options: [
       "А. Заявлена вимога має лише одну кінцеву інтерпретацію",
-      "Б. Заявлена вимога може бути задоволена у програмному забезпеченні",
+      "Б. Заявлена вимога може бути задоволена у програмному забезпеченні", 
       "В. SRS не суперечить документам більш високого рівня",
       "Г. Кожна вимога, визначена в SRS, може бути перевірена"
     ],
     correct: [2],
-    type: "single"
+    type: "single",
+    explanation: "Несуперечливість означає відсутність конфліктів з вищими документами"
   },
   {
     category: "Якість SRS",
@@ -381,19 +427,21 @@ const questions = [
       "В. Тоді і тільки тоді, коли кожну вимогу можна перевірити"
     ],
     correct: [2],
-    type: "single"
+    type: "single",
+    explanation: "Всі вимоги без винятку мають бути перевірюваними"
   },
   {
     category: "User Stories",
     question: "Пов'язаний набір User Stories для досягнення бізнес-цілі:",
     options: [
       "А. Feature",
-      "Б. Epic",
+      "Б. Epic", 
       "В. Development task",
       "Г. Test Case"
     ],
     correct: [1],
-    type: "single"
+    type: "single",
+    explanation: "Epic - це великий набір пов'язаних User Stories"
   },
   {
     category: "User Stories",
@@ -406,16 +454,30 @@ const questions = [
       "Д. Я, як редактор статті, хочу мати права адміністратора"
     ],
     correct: [2],
-    type: "single"
+    type: "single",
+    explanation: "Повна User Story: роль + потреба + цінність (As a... I want... So that...)"
   }
 ];
 
+// --- Основні змінні ---
 let currentQuestion = 0;
 let userAnswers = [];
 let timer = null;
-let timeLeft = 2400; // 40 хвилин
+let timeLeft = 2400; // 40 хвилин в секундах
 let dragSortIndex = null;
 
+// --- Перевірка, чи питання має відповідь ---
+function isAnswered(qIdx) {
+  const q = questions[qIdx];
+  const ans = userAnswers[qIdx];
+  if (q.type === "single") return ans !== null && ans !== undefined;
+  if (q.type === "multiple") return Array.isArray(ans) && ans.length > 0;
+  if (q.type === "match") return Array.isArray(ans) && ans.every(x => x !== null && x !== undefined);
+  if (q.type === "sort") return Array.isArray(ans) && ans.length === q.options.length;
+  return false;
+}
+
+// --- Запуск тесту ---
 function startTest() {
   document.getElementById('startScreen').style.display = 'none';
   document.getElementById('progressContainer').style.display = 'block';
@@ -431,6 +493,7 @@ function startTest() {
   startTimer();
 }
 
+// --- Відображення питання ---
 function renderQuestion() {
   const container = document.getElementById('questionsContainer');
   container.innerHTML = "";
@@ -480,7 +543,6 @@ function renderQuestion() {
       `;
     });
   } else if (q.type === "sort") {
-    // Порядок: масив індексів
     let order = userAnswers[currentQuestion] || q.options.map((_, i) => i);
     html += `<div id="sort-list">`;
     order.forEach((optIdx, i) => {
@@ -494,12 +556,13 @@ function renderQuestion() {
     <div style="font-size:0.9em;color:#888;margin:10px 0;">Перетягніть варіанти у потрібному порядку</div>`;
   }
   html += "</div></div>";
-
   container.innerHTML = html;
   document.getElementById("prevBtn").disabled = currentQuestion === 0;
   document.getElementById("nextBtn").innerText = currentQuestion === questions.length - 1 ? "Завершити" : "Далі";
+  document.getElementById("nextBtn").disabled = !isAnswered(currentQuestion);
 }
 
+// --- Обробка вибору відповіді ---
 function selectAnswer(qIdx, optIdx, isMultiple) {
   if (isMultiple) {
     if (!userAnswers[qIdx]) userAnswers[qIdx] = [];
@@ -521,6 +584,18 @@ function selectMatch(qIdx, leftIdx, rightIdx) {
   renderQuestion();
 }
 
+// --- Сортування (drag&drop) ---
+function sortDrag(event, idx) { dragSortIndex = idx; }
+function sortDrop(event, idx) {
+  let arr = (userAnswers[currentQuestion] || questions[currentQuestion].options.map((_,i)=>i)).slice();
+  const [removed] = arr.splice(dragSortIndex, 1);
+  arr.splice(idx, 0, removed);
+  userAnswers[currentQuestion] = arr;
+  dragSortIndex = null;
+  renderQuestion();
+}
+
+// --- Перехід між питаннями ---
 function previousQuestion() {
   if (currentQuestion > 0) currentQuestion--;
   renderQuestion();
@@ -540,6 +615,7 @@ function updateProgress() {
   document.getElementById("progressBar").style.width = percent + "%";
 }
 
+// --- Таймер ---
 function startTimer() {
   updateTimerText();
   if (timer) clearInterval(timer);
@@ -558,18 +634,7 @@ function updateTimerText() {
   document.getElementById("timer").textContent = `${min}:${sec.toString().padStart(2, "0")}`;
 }
 
-// Drag & Drop for sort
-function sortDrag(event, idx) { dragSortIndex = idx; }
-function sortDrop(event, idx) {
-  let arr = (userAnswers[currentQuestion] || questions[currentQuestion].options.map((_,i)=>i)).slice();
-  const [removed] = arr.splice(dragSortIndex, 1);
-  arr.splice(idx, 0, removed);
-  userAnswers[currentQuestion] = arr;
-  dragSortIndex = null;
-  renderQuestion();
-}
-
-// Перевірка відповідей
+// --- Підрахунок результату ---
 function showResults() {
   document.getElementById("questionsContainer").style.display = "none";
   document.getElementById("navigation").style.display = "none";
@@ -610,6 +675,7 @@ function showResults() {
   document.getElementById("scoreDescription").textContent = score >= 18 ? "Вітаємо! Ви пройшли тест." : "На жаль, не пройдено. Спробуйте ще раз!";
 }
 
+// --- Повторити тест ---
 function restartTest() {
   document.getElementById('resultsScreen').style.display = 'none';
   document.getElementById('startScreen').style.display = 'block';
